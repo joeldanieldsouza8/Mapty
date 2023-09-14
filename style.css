@@ -218,3 +218,54 @@ a:visited {
 .cycling-popup .leaflet-popup-content-wrapper {
   border-left: 5px solid var(--color-brand--1);
 }
+
+
+
+.btn {
+  font-family: inherit;
+  font-size: 1.4rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  border: none;
+  border-radius: 3px;
+  padding: 0.7rem 1.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  
+}
+
+.btn--reset {
+  background-color: var(--color-brand--1);
+  color: #fff;
+  margin-right: 1rem;
+  margin-bottom: 1.75rem;
+}
+
+.btn--sort {
+  color: var(--color-dark--1);
+  background-color: var(--color-light--2);
+  margin-left: 1rem;
+  margin-bottom: 1.75rem;
+}
+
+.btn--edit {
+  background-color: var(--color-brand--1);
+  color: #fff;
+  margin-right: 1rem;
+  margin-bottom: 1.75rem;
+  
+}
+
+/* Way 1 */
+/* .controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+} */
+
+/* Way 2 */
+.controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem 2.5rem;
+}

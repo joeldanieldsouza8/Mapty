@@ -1,5 +1,18 @@
 "use strict";
 
+/* 
+  Note to self:
+  - insertAdjacentHTML() is a method that allows us to insert a string of HTML into the DOM, adjacent to the element we selected.
+  - The first argument is the position where we want to insert the HTML.
+  - The second argument is the string of HTML we want to insert.
+  - We use the afterend position to insert the HTML element as a sibling, after the selected element. 
+
+  beforebegin - Before the element itself.
+  afterbegin - Just inside the element, before its first child.
+  beforeend - Just inside the element, after its last child.
+  afterend - After the element itself.
+  */
+
 class Workout {
   date = new Date();
   id = (Date.now() + "").slice(-10);
@@ -83,12 +96,15 @@ const inputDistance = document.querySelector(".form__input--distance");
 const inputDuration = document.querySelector(".form__input--duration");
 const inputCadence = document.querySelector(".form__input--cadence");
 const inputElevation = document.querySelector(".form__input--elevation");
+const btnReset = document.querySelector(".btn--reset");
+const btnSort = document.querySelector(".btn--sort");
 
 class App {
   #map;
   #mapEvent;
   #workouts = [];
   #mapZoomLevel = 13;
+  #sorted = false;
 
   constructor() {
     // Get user's position
@@ -101,9 +117,11 @@ class App {
     form.addEventListener("submit", this._newWorkout.bind(this));
     inputType.addEventListener("change", this._toggleElevationField);
     containerWorkouts.addEventListener("click", this._moveToPopup.bind(this));
-  }
+    btnReset.addEventListener("click", this._reset.bind(this));
 
-  
+    // Sort workouts by distance
+    btnSort.addEventListener("click", this._sort.bind(this));
+  }
 
   _getPosition() {
     if (navigator.geolocation) {
@@ -222,7 +240,6 @@ class App {
     // Render workout on map as marker
     this._renderWorkoutMarker(workout);
 
-    // Render workout on list
     this._renderWorkout(workout);
 
     // Hide form + clear input fields
@@ -251,21 +268,22 @@ class App {
   }
 
   _renderWorkout(workout) {
+    // If sort is false, render workouts as they are
     let html = `
     <li class="workout workout--${workout.type}" data-id="${workout.id}">
     <h2 class="workout__title">${workout.description}</h2>
-    <div class="workout__details">
-      <span class="workout__icon">${
-        workout.type === "running" ? "🏃‍♂️" : "🚴‍♀️"
-      }</span>
-      <span class="workout__value">${workout.distance}</span>
-      <span class="workout__unit">km</span>
-    </div>
-    <div class="workout__details">
-      <span class="workout__icon">⏱</span>
-      <span class="workout__value">${workout.duration}</span>
-      <span class="workout__unit">min</span>
-    </div>
+      <div class="workout__details">
+        <span class="workout__icon">${
+          workout.type === "running" ? "🏃‍♂️" : "🚴‍♀️"
+        }</span>
+        <span class="workout__value">${workout.distance}</span>
+        <span class="workout__unit">km</span>
+      </div>
+      <div class="workout__details">
+        <span class="workout__icon">⏱</span>
+        <span class="workout__value">${workout.duration}</span>
+        <span class="workout__unit">min</span>
+      </div>
   `;
 
     if (workout.type === "running") {
@@ -300,26 +318,27 @@ class App {
       `;
     }
 
-    /* 
-    Note to self:
-    - insertAdjacentHTML() is a method that allows us to insert a string of HTML into the DOM, adjacent to the element we selected.
-    - The first argument is the position where we want to insert the HTML.
-    - The second argument is the string of HTML we want to insert.
-    - We use the afterend position to insert the HTML element as a sibling, after the selected element. 
-    */
+    // This inserts the HTML element as a sibling, after the selected element. In this case, the selected element is the form. The HTML element is the workout list item. This is the element that will be inserted into the DOM.
     form.insertAdjacentHTML("afterend", html);
   }
 
   _moveToPopup(e) {
     // The closest() method traverses the Element and its parents (heading toward the document root) until it finds a node that matches the provided selector string. Will return itself or the matching ancestor. If no such element exists, it returns null.
-    // In this case, we are looking for the closest element with the class of "workout".
     const workoutEl = e.target.closest(".workout");
+    // console.log(workoutEl);
 
-    if (!workoutEl) return; // Guard clause
+    if (!workoutEl) return;
 
+    // The dataset property on the HTMLElement interface provides read/write access to all the custom data attributes (data-*) set on the element. It is a map of DOMString, one entry for each custom data attribute.
     const workout = this.#workouts.find(
       (work) => work.id === workoutEl.dataset.id
     );
+    // console.log(workout);
+
+    // The setView() method sets the view of the map (geographical center and zoom) with the given animation options.
+    // The setZoom() method sets the zoom level of the map.
+
+    if (workout === undefined || this.#map === undefined) return;
 
     this.#map.setView(workout.coords, this.#mapZoomLevel, {
       animate: true,
@@ -327,6 +346,8 @@ class App {
         duration: 1,
       },
     });
+
+    // workout.click();
   }
 
   _setLocalStorage() {
@@ -363,9 +384,46 @@ class App {
     });
   }
 
-  reset() {
+  _reset() {
     localStorage.removeItem("workouts");
     location.reload();
+  }
+
+  _sort() {
+    // Get the list of workouts
+    const workouts = document.querySelector(".workouts");
+
+    // Get the list items
+    const items = workouts.querySelectorAll(".workout");
+
+    // Convert the list items into an array
+    const itemsArr = Array.from(items);
+
+    // Sort the array
+    if (!this.#sorted) {
+      itemsArr.sort((a, b) => {
+        const aDistance = a.querySelector(".workout__value").textContent;
+        const bDistance = b.querySelector(".workout__value").textContent;
+        return aDistance - bDistance;
+      });
+      this.#sorted = true;
+    } else {
+      itemsArr.sort((a, b) => {
+        const aDistance = a.querySelector(".workout__value").textContent;
+        const bDistance = b.querySelector(".workout__value").textContent;
+        return bDistance - aDistance;
+      });
+      this.#sorted = false;
+    }
+
+    // Remove all existing list items from the DOM
+    items.forEach((item) => item.remove());
+
+    // Insert the sorted list items back into the DOM
+    itemsArr.forEach((item) => {
+      // This inserts the HTML element as the last child of the selected element. In this case, the selected element is the workouts list. The HTML element is the workout list item. This is the element that will be inserted into the DOM.
+      workouts.insertAdjacentElement("beforeend", item);
+    });
   }
 }
 
